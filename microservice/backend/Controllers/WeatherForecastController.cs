@@ -14,30 +14,26 @@ public class WeatherForecastController : ControllerBase
     };
 
     private readonly ILogger<WeatherForecastController> _logger;
-    private readonly IConfiguration _configuration;
+    private readonly string connectionString;
 
     public WeatherForecastController(ILogger<WeatherForecastController> logger, IConfiguration configuration)
     {
         _logger = logger;
-        _configuration = configuration;
+        connectionString = configuration.GetConnectionString("redis");
     }
 
     [HttpGet(Name = "GetWeatherForecast")]
     public IEnumerable<WeatherForecast> Get()
     {
-        List<WeatherForecast> result = new List<WeatherForecast>();
+        List<WeatherForecast> result = new();
 
-        using (var redisConnection = ConnectionMultiplexer.Connect(_configuration.GetConnectionString("redis")))
+        using (var redisConnection = ConnectionMultiplexer.Connect(connectionString))
         {
             var redis = redisConnection.GetDatabase();
 
-            List<RedisValue>? list = redis.ListRange("weather", 0, 10).ToList();
+            List<RedisValue>? list = redis.ListRange("weather", 0, 9).ToList();
 
-            foreach (var jsonString in list)
-            {
-                WeatherForecast weatherForecast = JsonSerializer.Deserialize<WeatherForecast>(jsonString)!;
-                result.Add(weatherForecast!);
-            }
+            result.AddRange(list.Select(jsonString => JsonSerializer.Deserialize<WeatherForecast>(jsonString)!));
         }
 
         return result;
@@ -46,7 +42,7 @@ public class WeatherForecastController : ControllerBase
     [HttpPost(Name = "PostWeatherForecast")]
     public async Task<WeatherForecast> Post()
     {
-        using (var redisConnection = ConnectionMultiplexer.Connect(_configuration.GetConnectionString("redis")))
+        using (var redisConnection = ConnectionMultiplexer.Connect(connectionString))
         {
             var redis = redisConnection.GetDatabase();
 
