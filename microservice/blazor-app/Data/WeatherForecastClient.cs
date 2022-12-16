@@ -13,4 +13,9 @@ public class WeatherForecastClient
     {
         return client.GetFromJsonAsync<WeatherForecast[]>("/weatherforecast");
     }
+
+    public async Task PostForecastAsync()
+    {
+        await client.PostAsync("/weatherforecast", null);
+    }
 }
